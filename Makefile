@@ -1,16 +1,14 @@
-/*
-文件概览：Makefile
-这是gomobile-ipfs项目的主构建文件，定义了编译、测试、发布的完整流程。
-主要功能包括：
-1. 为Android和iOS平台构建Go核心库
-2. 创建移动平台桥接库
-3. 构建示例应用
-4. 测试框架各组件
-5. 生成文档
-6. 发布到Maven和CocoaPods仓库
-
-主要构建目标详解：
-*/
+# 文件概览：Makefile
+# 这是gomobile-ipfs项目的主构建文件，定义了编译、测试、发布的完整流程。
+# 主要功能包括：
+# 1. 为Android和iOS平台构建Go核心库
+# 2. 创建移动平台桥接库
+# 3. 构建示例应用
+# 4. 测试框架各组件
+# 5. 生成文档
+# 6. 发布到Maven和CocoaPods仓库
+# 
+# 主要构建目标详解：
 ## 这两行确定了Makefile的位置和配置文件位置。$(shell ...)执行shell命令，$(MAKEFILE_LIST)是make内置变量，包含所有包含的makefile文件名。
 # 获取Makefile所在的目录路径
 MAKEFILE_DIR = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
