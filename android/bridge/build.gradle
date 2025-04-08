@@ -1,10 +1,21 @@
 plugins {
     id 'com.android.library'
     id 'maven-publish'
-    id 'com.jfrog.bintray' version '1.8.4'
+    // 注释掉Bintray插件，因为Bintray服务已关闭
+    // id 'com.jfrog.bintray' version '1.8.4'
 }
 
 def manifest = rootProject.ext.manifest
+
+// 添加额外的仓库配置
+repositories {
+    google()
+    mavenCentral()
+    maven { url 'https://maven.aliyun.com/repository/public' }  // 阿里云镜像
+    maven { url 'https://maven.aliyun.com/repository/jcenter' } // JCenter镜像
+    maven { url 'https://jitpack.io' } // JitPack替代源
+    jcenter() // 保留原有的jcenter
+}
 
 android {
     compileSdkVersion manifest.global.android.compile_sdk_version
@@ -46,4 +57,57 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 }
 
-apply from: 'publish.gradle'
+// 仅应用部分发布配置，跳过Bintray配置
+task javadoc(type: Javadoc) {
+    title = manifest.android_bridge.name
+    source = android.sourceSets.main.java.srcDirs
+    destinationDir = new File("$projectDir/javadoc")
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+afterEvaluate {
+    javadoc.classpath += files(android.libraryVariants.collect { variant ->
+        variant.javaCompileProvider.get().classpath.files
+    })
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+task sourcesJar(type: Jar) {
+    classifier = 'sources'
+    from android.sourceSets.main.java.srcDirs
+}
+
+publishing {
+    publications {
+        Production(MavenPublication) {
+            artifacts = [
+                "$buildDir/outputs/aar/bridge-release.aar",
+                sourcesJar,
+                javadocJar
+            ]
+
+            groupId manifest.global.group_id
+            artifactId manifest.android_bridge.artifact_id
+            version rootProject.ext.version
+
+            pom {
+                name = manifest.android_bridge.name
+                url = manifest.global.github.url
+                description = manifest.android_bridge.description
+                packaging = manifest.global.android.packaging
+
+                scm {
+                    connection = manifest.global.android.scm.connection
+                    developerConnection = manifest.global.android.scm.developer_connection
+                    url = manifest.global.android.scm.url
+                }
+            }
+        }
+    }
+}
+
+// apply from: 'publish.gradle'  // 注释掉这行以禁用Bintray发布

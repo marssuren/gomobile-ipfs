@@ -10,14 +10,12 @@ android {
 		versionCode 1
 		versionName '1.0'
 		testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
-		signingConfigs {
-			release {
-				storeType 'pkcs12'
-				storeFile file(rootDir.getCanonicalPath() + '/gomobile-ipfs.pfx')
-				keyAlias 'gomobile-ipfs'
-				storePassword System.getenv('ANDROID_KEYPASS')
-				keyPassword System.getenv('ANDROID_KEYPASS')
-			}
+		
+		// 添加ABI过滤器，只保留arm64-v8a架构，大幅减小APK大小
+		ndk {
+			// 只包含最常用的架构，可以将APK大小减少75%
+			abiFilters 'arm64-v8a'
+			// 如果需要支持旧设备，可以添加：'armeabi-v7a'
 		}
 	}
 
@@ -25,7 +23,7 @@ android {
 		release {
 			minifyEnabled false
 			proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-			signingConfig signingConfigs.release
+			signingConfig signingConfigs.debug
 		}
 	}
 

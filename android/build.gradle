@@ -1,6 +1,10 @@
 buildscript {
     repositories {
         google()
+        mavenCentral()
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/jcenter' }
+        maven { url 'https://jitpack.io' }
         jcenter()
     }
     dependencies {
@@ -23,10 +27,12 @@ task setupAllProjectsRepos(dependsOn: 'importManifest') {
     allprojects {
         repositories {
             google()
+            mavenCentral()
+            maven { url 'https://maven.aliyun.com/repository/public' }
+            maven { url 'https://maven.aliyun.com/repository/jcenter' }
+            maven { url 'https://jitpack.io' }
             jcenter()
-            // If gomobile-ipfs core is available locally, use it
             maven { url "${rootDir.getPath()}/../build/android/maven" }
-            // If not available locally, download it from Bintray repo
             maven { url rootProject.ext.manifest.global.android.bintray_url }
         }
     }

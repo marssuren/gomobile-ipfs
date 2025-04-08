@@ -1,6 +1,23 @@
+/*
+文件概览：Makefile
+这是gomobile-ipfs项目的主构建文件，定义了编译、测试、发布的完整流程。
+主要功能包括：
+1. 为Android和iOS平台构建Go核心库
+2. 创建移动平台桥接库
+3. 构建示例应用
+4. 测试框架各组件
+5. 生成文档
+6. 发布到Maven和CocoaPods仓库
+
+主要构建目标详解：
+*/
+## 这两行确定了Makefile的位置和配置文件位置。$(shell ...)执行shell命令，$(MAKEFILE_LIST)是make内置变量，包含所有包含的makefile文件名。
+# 获取Makefile所在的目录路径
 MAKEFILE_DIR = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+# 项目配置文件路径
 MANIFEST_FILE = $(MAKEFILE_DIR)/Manifest.yml
 
+# 工具目录和脚本定义
 UTILS_DIR = $(MAKEFILE_DIR)/utils
 UTIL_MANIFEST_GET_BIN = $(UTILS_DIR)/manifest_get/manifest_get.sh
 UTIL_MANIFEST_GET = $(UTILS_DIR)/manifest_get
@@ -27,7 +44,9 @@ BUILD_DIR = $(MAKEFILE_DIR)/build
 PIP ?= pip3
 
 MANIFEST_GET_FUNC=$(or $(shell $(UTIL_MANIFEST_GET_BIN) $(1)),$(error "Can't get <$(1)> from Manifest.yml"))
+# 版本号和包名设置
 DEV_VERSION := 0.0.42-dev
+# 实际使用的版本号：优先使用环境变量GOMOBILE_IPFS_VERSION，如不存在则使用DEV_VERSION
 VERSION := $(or $(GOMOBILE_IPFS_VERSION),$(DEV_VERSION))
 ANDROID_GROUP_ID := $(shell echo $(call MANIFEST_GET_FUNC,global.group_id) | tr . /)
 ANDROID_CORE_ARTIFACT_ID := $(call MANIFEST_GET_FUNC,go_core.android.artifact_id)
@@ -36,23 +55,34 @@ ANDROID_MINIMUM_VERSION := $(call MANIFEST_GET_FUNC,android.min_sdk_version)
 IOS_CORE_PACKAGE := $(call MANIFEST_GET_FUNC,go_core.ios.package)
 IOS_APP_FILENAME := $(call MANIFEST_GET_FUNC,ios_demo_app.filename)
 
-GO_DIR = $(MAKEFILE_DIR)/go
-GO_SRC = $(shell find $(GO_DIR) -name \*.go)
-GO_MOD_FILES = $(GO_DIR)/go.mod $(GO_DIR)/go.sum
 
+## Go相关目录和包设置 这些变量定义了Go代码的位置和将被编译成移动库的包路径。
+# Go代码根目录
+GO_DIR = $(MAKEFILE_DIR)/go
+# 找出所有Go源文件
+GO_SRC = $(shell find $(GO_DIR) -name \*.go)
+# Go模块文件
+GO_MOD_FILES = $(GO_DIR)/go.mod $(GO_DIR)/go.sum
+# 核心包路径 - 这是要编译为移动库的Go包
 CORE_PACKAGE = github.com/ipfs-shipyard/gomobile-ipfs/go/bind/core
 EXT_PACKAGE ?=
+
 GOMOBILE_OPT ?=
 GOMOBILE_TARGET ?=
 GOMOBILE_ANDROID_TARGET ?= android
 GOMOBILE_IOS_TARGET ?= ios
 
+# Android构建相关设置 这些定义了Android构建过程中的各种路径和文件位置。
 ANDROID_DIR = $(MAKEFILE_DIR)/android
+# Android源文件(排除.gitignore)
 ANDROID_SRC = $(shell git ls-files $(ANDROID_DIR) | grep -v '.gitignore')
+# Android构建目录
 ANDROID_BUILD_DIR = $(BUILD_DIR)/android
+# 中间构建目录
 ANDROID_BUILD_DIR_INT = $(ANDROID_BUILD_DIR)/intermediates
 ANDROID_BUILD_DIR_INT_CORE = $(ANDROID_BUILD_DIR_INT)/core
 ANDROID_GOMOBILE_CACHE="$(ANDROID_BUILD_DIR_INT_CORE)/.gomobile-cache"
+# 生成的AAR文件路径
 ANDROID_CORE = $(ANDROID_BUILD_DIR_INT_CORE)/core.aar
 ANDROID_BUILD_DIR_MAV = $(ANDROID_BUILD_DIR)/maven
 ANDROID_BUILD_DIR_MAV_CORE = $(ANDROID_BUILD_DIR_MAV)/$(ANDROID_GROUP_ID)/$(ANDROID_CORE_ARTIFACT_ID)/$(VERSION)
@@ -60,12 +90,16 @@ ANDROID_OUTPUT_APK = $(ANDROID_DIR)/app/build/outputs/apk/release/app-release.ap
 ANDROID_BUILD_DIR_APP = $(ANDROID_BUILD_DIR)/app/$(VERSION)
 ANDROID_BUILD_DIR_APP_APK = $(ANDROID_BUILD_DIR_APP)/$(ANDROID_APP_FILENAME)-$(VERSION).apk
 
+# iOS构建相关设置 这些定义了iOS构建过程中的各种路径和文件位置。
+# iOS目录
 IOS_DIR = $(MAKEFILE_DIR)/ios
+# iOS源文件
 IOS_SRC = $(shell git ls-files $(IOS_DIR) | grep -v '.gitignore')
 IOS_BUILD_DIR = $(BUILD_DIR)/ios
 IOS_BUILD_DIR_INT = $(IOS_BUILD_DIR)/intermediates
 IOS_BUILD_DIR_INT_CORE = $(IOS_BUILD_DIR_INT)/core
 IOS_GOMOBILE_CACHE="$(IOS_BUILD_DIR_INT_CORE)/.gomobile-cache"
+# 生成的XCFramework路径
 IOS_CORE = $(IOS_BUILD_DIR_INT_CORE)/Core.xcframework
 IOS_BUILD_DIR_CCP = $(IOS_BUILD_DIR)/cocoapods
 IOS_BUILD_DIR_CCP_CORE = $(IOS_BUILD_DIR_CCP)/$(IOS_CORE_PACKAGE)/$(VERSION)
@@ -79,12 +113,15 @@ IOS_BUILD_DIR_INT_APP_IPA_OUTPUT = $(IOS_BUILD_DIR_INT_APP_IPA)/Example.ipa
 IOS_BUILD_DIR_INT_APP_ARCHIVE = $(IOS_BUILD_DIR_INT_APP)/archive
 IOS_BUILD_DIR_INT_APP_ARCHIVE_OUTPUT = $(IOS_BUILD_DIR_INT_APP_ARCHIVE)/app-release.xcarchive
 
+# 文档目录
 DOC_DIR = $(MAKEFILE_DIR)/docs
 ANDROID_DOC_DIR = $(DOC_DIR)/android
 IOS_DOC_DIR = $(DOC_DIR)/ios
 
+# 主要构建目标
 .PHONY: help build_core build_core.android build_core.ios build_demo build_demo.android build_demo.ios clean clean.android clean.ios docgen docgen.android docgen.ios fail_on_dev publish publish_bridge publish_bridge.android publish_bridge.ios publish_core publish_core.android publish_core.ios publish_demo publish_demo.android publish_demo.ios re re.android re.ios test test_bridge test_bridge.android test_bridge.ios test_core
 
+# 帮助信息
 help:
 	@echo 'Commands:'
 	@$(MAKE) -pRrq -f $(lastword $(MAKEFILE_LIST)) : 2>/dev/null \
@@ -94,28 +131,35 @@ help:
 		| grep -v / \
 		| sed 's/^/	$(HELP_MSG_PREFIX)make /'
 
-# Build rules
+# 核心构建目标及依赖规则。这是主要的构建目标，调用它会同时构建Android和iOS的核心库。
 build_core: build_core.android build_core.ios
-
+# Android核心库构建
 build_core.android: $(ANDROID_BUILD_DIR_MAV_CORE)
-
+# Maven格式处理
 $(ANDROID_BUILD_DIR_MAV_CORE): $(ANDROID_CORE) $(MANIFEST_FILE)
 	@echo '------------------------------------'
 	@echo '   Android Core: Maven formatting   '
 	@echo '------------------------------------'
+	# 检查并安装Python依赖
 	if [ "$$($(PIP) freeze | grep -f $(UTIL_MAVEN_FORMAT_REQ) | wc -l)" != "$$(wc -l < $(UTIL_MAVEN_FORMAT_REQ))" ]; then \
 		$(PIP) install -r $(UTIL_MAVEN_FORMAT_REQ); echo; \
 	fi
+	# 运行Maven格式化脚本
 	$(UTIL_MAVEN_FORMAT_CORE_BIN) && touch $(ANDROID_BUILD_DIR_MAV_CORE)
 	@echo 'Done!'
 
+# GoMobile绑定生成AAR 这部分执行了从Go代码到Android AAR库的完整构建流程
 $(ANDROID_CORE): $(ANDROID_BUILD_DIR_INT_CORE) $(GO_SRC) $(GO_MOD_FILES)
 	@echo '------------------------------------'
 	@echo '   Android Core: Gomobile binding   '
 	@echo '------------------------------------'
+	# 下载Go依赖
 	cd $(GO_DIR) && go mod download
+	# 初始化GoMobile
 	cd $(GO_DIR) && go run golang.org/x/mobile/cmd/gomobile init
+	# 创建缓存目录
 	mkdir -p $(ANDROID_GOMOBILE_CACHE) android/libs
+	# 运行GoMobile绑定命令，生成AAR
 	GO111MODULE=on cd $(GO_DIR) && go run golang.org/x/mobile/cmd/gomobile bind \
 		-o $(ANDROID_CORE) \
 		-v $(GOMOBILE_OPT) \
@@ -129,16 +173,18 @@ $(ANDROID_CORE): $(ANDROID_BUILD_DIR_INT_CORE) $(GO_SRC) $(GO_MOD_FILES)
 
 $(ANDROID_BUILD_DIR_INT_CORE):
 	mkdir -p $(ANDROID_BUILD_DIR_INT_CORE)
-
+# iOS核心库构建
 build_core.ios: $(IOS_BUILD_DIR_CCP_CORE)
-
+# CocoaPod格式处理
 $(IOS_BUILD_DIR_CCP_CORE): $(IOS_CORE) $(MANIFEST_FILE)
 	@echo '------------------------------------'
 	@echo '   iOS Core: CocoaPod formatting   '
 	@echo '------------------------------------'
+	# 检查并安装Python依赖
 	if [ "$$($(PIP) freeze | grep -f $(UTIL_COCOAPOD_FORMAT_REQ) | wc -l)" != "$$(wc -l < $(UTIL_COCOAPOD_FORMAT_REQ))" ]; then \
 		$(PIP) install -r $(UTIL_COCOAPOD_FORMAT_REQ); echo; \
 	fi
+	# 运行CocoaPod格式化脚本
 	$(UTIL_COCOAPOD_FORMAT_CORE_BIN) && touch $(IOS_BUILD_DIR_CCP_CORE)
 	@echo 'Done!'
 
@@ -146,15 +192,23 @@ $(IOS_BUILD_DIR_CCP_CORE): $(IOS_CORE) $(MANIFEST_FILE)
 # To generate a fat XCFramework that supports iOS, macOS, and macCatalyst for all supportec architectures (amd64 and arm64),
 # specify -target ios,macos,maccatalyst
 # we need to use `nowatchdog` tags, see https://github.com/libp2p/go-libp2p-connmgr/issues/98
+# 来自 https://pkg.go.dev/golang.org/x/mobile/cmd/gomobile#hdr-Build_a_library_for_Android_and_iOS
+# 要生成支持iOS、macOS和macCatalyst的所有支持架构(amd64和arm64)的胖XCFramework，
+# 需指定 -target ios,macos,maccatalyst
+# 我们需要使用 `nowatchdog` 标签，参见 https://github.com/libp2p/go-libp2p-connmgr/issues/98
 $(IOS_CORE): $(IOS_BUILD_DIR_INT_CORE) $(GO_SRC) $(GO_MOD_FILES)
 	@echo '------------------------------------'
 	@echo '     iOS Core: Gomobile binding     '
 	@echo '------------------------------------'
+	# 下载Go依赖
 	cd $(GO_DIR) && go mod download
+	# 安装gobind工具
 	cd $(GO_DIR) && go install golang.org/x/mobile/cmd/gobind
+	# 初始化GoMobile
 	cd $(GO_DIR) && go run golang.org/x/mobile/cmd/gomobile init
+	# 创建目录
 	mkdir -p $(IOS_GOMOBILE_CACHE) ios/Frameworks
-
+	# 运行GoMobile绑定命令，生成XCFramework
 	cd $(GO_DIR) && go run golang.org/x/mobile/cmd/gomobile bind \
 			-o $(IOS_CORE) \
 			-tags 'nowatchdog' \
@@ -234,7 +288,7 @@ $(IOS_BUILD_DIR_INT_APP_ARCHIVE_OUTPUT): $(IOS_BUILD_DIR_INT_APP_ARCHIVE) $(IOS_
 $(IOS_BUILD_DIR_INT_APP_ARCHIVE):
 	@mkdir -p $(IOS_BUILD_DIR_INT_APP_ARCHIVE)
 
-# Publish rules
+# 用于发布的目标
 publish: publish_core publish_bridge publish_demo
 
 publish.ios: publish_core.ios publish_bridge.ios
@@ -312,7 +366,7 @@ publish_demo.ios: fail_on_dev build_demo.ios
 	#TODO
 	@echo 'Done!'
 
-# Doc generation rules
+# 文档生成
 docgen: docgen.android docgen.ios
 
 docgen.android: $(ANDROID_DOC_DIR) build_core.android
@@ -342,7 +396,7 @@ docgen.ios: $(IOS_DOC_DIR) build_core.ios
 $(IOS_DOC_DIR):
 	mkdir -p $(IOS_DOC_DIR)
 
-# Test rules
+# 运行所有测试
 test: test_core test_bridge
 
 test_bridge: test_bridge.android test_bridge.ios
@@ -375,6 +429,7 @@ test_bridge.ios: build_core.ios
 	xcodebuild test -project $(IOS_DIR)/Bridge/GomobileIPFS.xcodeproj -scheme GomobileIPFS -sdk iphonesimulator -destination "platform=iOS Simulator,id=$$DESTINATION"
 	@echo 'Done!'
 
+# 运行Go核心测试
 test_core:
 	@echo '------------------------------------'
 	@echo '       Go Core: running test        '
@@ -389,9 +444,9 @@ fail_on_dev:
 		exit 1; \
 	fi
 
-# Clean rules
+# 清理构建产物
 clean: clean.android clean.ios
-
+# 清理Android构建产物
 clean.android:
 	@echo '------------------------------------'
 	@echo '  Android Core: removing build dir  '
