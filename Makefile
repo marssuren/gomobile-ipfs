@@ -164,6 +164,7 @@ $(ANDROID_CORE): $(ANDROID_BUILD_DIR_INT_CORE) $(GO_SRC) $(GO_MOD_FILES)
 		-cache $(ANDROID_GOMOBILE_CACHE) \
 		-target=$(GOMOBILE_ANDROID_TARGET)$(GOMOBILE_TARGET) \
 		-androidapi $(ANDROID_MINIMUM_VERSION) \
+		-javapkg=org.ipfs.gomobile \
 		$(CORE_PACKAGE) $(EXT_PACKAGE)
 	touch $@
 	cd $(GO_DIR) && go mod tidy
