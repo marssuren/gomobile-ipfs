@@ -44,7 +44,7 @@ func initConfig(out io.Writer, nBitsForKeypair int) (*ipfs_config.Config, error)
 		},
 
 		Routing: ipfs_config.Routing{
-			Type: "dhtclient",
+			Type: ipfs_config.NewOptionalString("dhtclient"),
 		},
 
 		// setup the node mount points.
@@ -58,15 +58,15 @@ func initConfig(out io.Writer, nBitsForKeypair int) (*ipfs_config.Config, error)
 		},
 
 		Reprovider: ipfs_config.Reprovider{
-			Interval: "12h",
-			Strategy: "all",
+			Interval: ipfs_config.NewOptionalDuration(12 * time.Hour),
+			Strategy: ipfs_config.NewOptionalString("all"),
 		},
 		Swarm: ipfs_config.SwarmConfig{
 			ConnMgr: ipfs_config.ConnMgr{
-				LowWater:    defaultConnMgrLowWater,
-				HighWater:   defaultConnMgrHighWater,
-				GracePeriod: defaultConnMgrGracePeriod.String(),
-				Type:        "basic",
+				LowWater:    ipfs_config.NewOptionalInteger(defaultConnMgrLowWater),
+				HighWater:   ipfs_config.NewOptionalInteger(defaultConnMgrHighWater),
+				GracePeriod: ipfs_config.NewOptionalDuration(defaultConnMgrGracePeriod),
+				Type:        ipfs_config.NewOptionalString("basic"),
 			},
 		},
 	}
@@ -167,7 +167,7 @@ func identityConfig(out io.Writer, nbits int) (ipfs_config.Identity, error) {
 	if err != nil {
 		return ident, err
 	}
-	ident.PeerID = id.Pretty()
+	ident.PeerID = id.String()
 	fmt.Fprintf(out, "libp2p_peer identity: %s\n", ident.PeerID)
 	return ident, nil
 }

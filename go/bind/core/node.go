@@ -83,7 +83,7 @@ func NewNode(r *Repo, config *NodeConfig) (*Node, error) {
 	ctx := context.Background()
 
 	// 加载IPFS插件
-	if _, err := loadPlugins(r.mr.Path); err != nil {
+	if _, err := loadPlugins(r.mr.Path()); err != nil {
 		return nil, err
 	}
 
@@ -96,7 +96,6 @@ func NewNode(r *Repo, config *NodeConfig) (*Node, error) {
 		}
 		// 配置自定义网络接口
 		ipfsutil.SetNetDriver(inet)
-		manet.SetNetInterface(inet)
 	}
 
 	// 蓝牙选项变量
