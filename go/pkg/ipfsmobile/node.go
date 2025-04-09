@@ -15,9 +15,13 @@ package node
 
 import (
 	// 导入必要的标准库
-	"context" // 用于上下文管理
-	"fmt"     // 用于格式化错误消息
-	"net"     // 提供网络连接接口
+	"context"       // 用于上下文管理
+	"fmt"           // 用于格式化错误消息
+	"net"           // 提供网络连接接口
+	"os"            // 用于文件操作
+	"path/filepath" // 用于路径处理
+	"runtime/debug" // 用于获取堆栈信息
+	"time"          // 用于时间戳
 
 	// 导入IPFS核心组件
 	ipfs_oldcmds "github.com/ipfs/kubo/commands"       // IPFS命令接口
@@ -25,7 +29,13 @@ import (
 	ipfs_corehttp "github.com/ipfs/kubo/core/corehttp" // IPFS HTTP接口
 	ipfs_p2p "github.com/ipfs/kubo/core/node/libp2p"   // IPFS网络层配置
 	p2p_host "github.com/libp2p/go-libp2p/core/host"   // libp2p主机接口
+
+	// 导入日志包
+	logging "github.com/ipfs/go-log" // IPFS日志系统
 )
+
+// 创建日志记录器
+var log = logging.Logger("ipfs-mobile")
 
 // IpfsConfig定义IPFS节点的配置选项
 type IpfsConfig struct {
@@ -141,12 +151,43 @@ func (im *IpfsMobile) ServeGateway(l net.Listener, writable bool, opts ...ipfs_c
 // NewNode根据给定配置创建新的IPFS移动节点
 // 这是创建IPFS节点的主要入口点
 func NewNode(ctx context.Context, cfg *IpfsConfig) (*IpfsMobile, error) {
+	// 设置高级别日志记录，确保捕获所有错误
+	logging.SetLogLevel("*", "DEBUG")
+
+	// 创建日志目录和文件
+	logDir := filepath.Join(cfg.RepoMobile.Path(), "logs")
+	os.MkdirAll(logDir, 0755)
+	logFile, err := os.Create(filepath.Join(logDir, "ipfs-debug-"+time.Now().Format("20060102-150405")+".log"))
+	if err != nil {
+		log.Errorf("无法创建日志文件: %s", err)
+	} else {
+		defer logFile.Close()
+		fmt.Fprintf(logFile, "====================== IPFS节点启动日志 ======================\n")
+		fmt.Fprintf(logFile, "时间: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+		fmt.Fprintf(logFile, "仓库路径: %s\n", cfg.RepoMobile.Path())
+	}
+
+	// 记录初始配置信息
+	log.Debugf("开始创建IPFS节点，仓库路径: %s", cfg.RepoMobile.Path())
+	if logFile != nil {
+		fmt.Fprintf(logFile, "\n[配置信息]\n")
+		fmt.Fprintf(logFile, "ExtraOpts: %+v\n", cfg.ExtraOpts)
+		fmt.Fprintf(logFile, "HostConfig: %+v\n", cfg.HostConfig)
+		fmt.Fprintf(logFile, "RoutingConfig: %+v\n", cfg.RoutingConfig)
+	}
+
 	// 填充默认配置值
+	log.Debug("填充默认配置")
 	if err := cfg.fillDefault(); err != nil {
+		log.Errorf("配置无效: %s", err)
+		if logFile != nil {
+			fmt.Fprintf(logFile, "[错误] 配置无效: %s\n", err)
+		}
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
 	// 构建IPFS节点配置
+	log.Debug("构建IPFS节点配置")
 	buildcfg := &ipfs_core.BuildCfg{
 		Online:                      true,                                                         // 节点处于在线模式
 		Permanent:                   false,                                                        // 非永久节点(适合移动设备)
@@ -157,16 +198,60 @@ func NewNode(ctx context.Context, cfg *IpfsConfig) (*IpfsMobile, error) {
 		ExtraOpts:                   cfg.ExtraOpts,                                                // 设置额外选项(如pubsub)
 	}
 
+	if logFile != nil {
+		fmt.Fprintf(logFile, "\n[构建配置]\n")
+		fmt.Fprintf(logFile, "Online: %t\n", buildcfg.Online)
+		fmt.Fprintf(logFile, "Permanent: %t\n", buildcfg.Permanent)
+		fmt.Fprintf(logFile, "DisableEncryptedConnections: %t\n", buildcfg.DisableEncryptedConnections)
+		fmt.Fprintf(logFile, "ExtraOpts: %+v\n", buildcfg.ExtraOpts)
+	}
+
 	// 创建IPFS核心节点
+	log.Debug("开始创建IPFS核心节点")
+	if logFile != nil {
+		fmt.Fprintf(logFile, "\n[创建IPFS核心节点]\n")
+		fmt.Fprintf(logFile, "时间: %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	}
+
 	inode, err := ipfs_core.NewNode(ctx, buildcfg)
 	if err != nil {
-		// 注释掉了解锁仓库的代码
-		// unlockRepo(repoPath)
-		return nil, fmt.Errorf("failed to init ipfs node: %s", err)
+		log.Errorf("创建IPFS节点失败: %s", err)
+		if logFile != nil {
+			fmt.Fprintf(logFile, "[严重错误] 创建IPFS节点失败: %s\n", err)
+			fmt.Fprintf(logFile, "详细错误信息: %+v\n", err)
+			fmt.Fprintf(logFile, "堆栈信息:\n%s\n", debug.Stack())
+
+			// 尝试分析错误链
+			type unwrapper interface {
+				Unwrap() error
+			}
+
+			currentErr := err
+			depth := 0
+			fmt.Fprintf(logFile, "\n[错误链分析]\n")
+			for currentErr != nil && depth < 10 {
+				fmt.Fprintf(logFile, "错误层级 %d: %v (%T)\n", depth, currentErr, currentErr)
+
+				if unwrappable, ok := currentErr.(unwrapper); ok {
+					currentErr = unwrappable.Unwrap()
+				} else {
+					currentErr = nil
+				}
+				depth++
+			}
+		}
+		return nil, fmt.Errorf("failed to init ipfs node: %w", err)
+	}
+
+	log.Debug("IPFS核心节点创建成功")
+	if logFile != nil {
+		fmt.Fprintf(logFile, "[成功] IPFS核心节点创建成功\n")
+		fmt.Fprintf(logFile, "节点ID: %s\n", inode.Identity.String())
+		fmt.Fprintf(logFile, "时间: %s\n", time.Now().Format("2006-01-02 15:04:05"))
 	}
 
 	// 创建命令上下文
-	// 注释表明这可能不是初始化的最佳方式
+	log.Debug("创建命令上下文")
 	cctx := ipfs_oldcmds.Context{
 		ConfigRoot: cfg.RepoMobile.Path(),  // 配置根路径
 		ReqLog:     &ipfs_oldcmds.ReqLog{}, // 请求日志
@@ -175,6 +260,7 @@ func NewNode(ctx context.Context, cfg *IpfsConfig) (*IpfsMobile, error) {
 		},
 	}
 
+	log.Debug("IPFS移动节点创建完成")
 	// 返回创建的移动IPFS节点
 	return &IpfsMobile{
 		commandCtx: cctx,           // 命令上下文

@@ -1,9 +1,12 @@
 package ipfs.gomobile.example;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -270,5 +273,27 @@ public class MainActivity extends AppCompatActivity {
             hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
         }
         return new String(hexChars, StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 检查当前网络连接状态
+     * @return 如果有网络连接可用返回true，否则返回false
+     */
+    public boolean isNetworkAvailable() {
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivityManager == null) {
+            return false;
+        }
+        
+        NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        boolean isConnected = activeNetworkInfo != null && activeNetworkInfo.isConnected();
+        
+        Log.d(TAG, "网络状态检查: " + (isConnected ? "已连接" : "未连接"));
+        if (isConnected) {
+            Log.d(TAG, "连接类型: " + activeNetworkInfo.getTypeName() + 
+                    ", 子类型: " + activeNetworkInfo.getSubtypeName());
+        }
+        
+        return isConnected;
     }
 }

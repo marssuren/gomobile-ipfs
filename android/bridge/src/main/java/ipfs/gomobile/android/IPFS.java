@@ -3,8 +3,16 @@ package ipfs.gomobile.android;
 import android.content.Context;
 import androidx.annotation.NonNull;
 
+import android.util.Log;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.lang.ref.WeakReference;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Objects;
 import org.apache.commons.io.FilenameUtils;
 import org.json.JSONObject;
@@ -24,6 +32,7 @@ import ipfs.gomobile.android.bledriver.BleInterface;
 */
 public class IPFS {
 
+    private static final String TAG = "IPFS_DEBUG";
     private WeakReference<Context> context;
     // Paths
     private static final String defaultRepoPath = "/ipfs/repo";
@@ -164,31 +173,119 @@ public class IPFS {
             throw new NodeStartException("Node already started");
         }
 
-        NodeConfig nodeConfig = Core.newNodeConfig();
-        nodeConfig.setBleDriver(new BleInterface(context.get(), true));
+        // 创建详细日志文件
+        File logFile = new File(absRepoPath, "ipfs-android-debug.log");
+        try (FileOutputStream fos = new FileOutputStream(logFile, true)) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            String timestamp = sdf.format(new Date());
+            String logHeader = "\n\n================ IPFS启动 [" + timestamp + "] ================\n";
+            fos.write(logHeader.getBytes());
+            
+            // 记录设备和环境信息
+            String deviceInfo = String.format(
+                "设备型号: %s\nAndroid版本: %s\nSDK版本: %d\n仓库路径: %s\n",
+                android.os.Build.MODEL,
+                android.os.Build.VERSION.RELEASE,
+                android.os.Build.VERSION.SDK_INT,
+                absRepoPath
+            );
+            fos.write(deviceInfo.getBytes());
+            
+            Log.d(TAG, "开始启动IPFS节点，仓库路径: " + absRepoPath);
+            fos.write("开始初始化节点配置...\n".getBytes());
 
-        // set net driver
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
-            NetDriver inet = new NetDriver();
-            nodeConfig.setNetDriver(inet);
+            NodeConfig nodeConfig = Core.newNodeConfig();
+            
+            // 记录BLE驱动初始化
+            fos.write("正在设置BLE驱动...\n".getBytes());
+            Context ctx = context.get();
+            if (ctx == null) {
+                String error = "Context已被回收，无法初始化BLE驱动";
+                Log.e(TAG, error);
+                fos.write((error + "\n").getBytes());
+            } else {
+                nodeConfig.setBleDriver(new BleInterface(ctx, true));
+                fos.write("BLE驱动设置完成\n".getBytes());
+            }
+
+            // 设置网络驱动
+            fos.write("正在设置网络驱动...\n".getBytes());
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                NetDriver inet = new NetDriver();
+                nodeConfig.setNetDriver(inet);
+                fos.write("已设置Android Q+网络驱动\n".getBytes());
+            } else {
+                fos.write("跳过网络驱动设置(Android版本低于Q)\n".getBytes());
+            }
+
+            // 设置MDNS锁定驱动
+            fos.write("正在设置MDNS锁定驱动...\n".getBytes());
+            if (ctx != null) {
+                MDNSLockerDriver imdnslocker = new MDNSLockerDriver(ctx);
+                nodeConfig.setMDNSLocker(imdnslocker);
+                fos.write("MDNS锁定驱动设置完成\n".getBytes());
+            } else {
+                fos.write("无法设置MDNS锁定驱动(Context已被回收)\n".getBytes());
+            }
+
+            try {
+                fos.write("正在打开仓库...\n".getBytes());
+                openRepoIfClosed();
+                fos.write("仓库打开成功\n".getBytes());
+                
+                // 记录创建节点前的信息
+                fos.write("\n开始创建IPFS节点...\n".getBytes());
+                Log.d(TAG, "开始创建IPFS节点...");
+                
+                try {
+                    node = Core.newNode(repo, nodeConfig);
+                    fos.write("IPFS节点创建成功!\n".getBytes());
+                    Log.d(TAG, "IPFS节点创建成功");
+                } catch (Exception e) {
+                    StringWriter sw = new StringWriter();
+                    PrintWriter pw = new PrintWriter(sw);
+                    e.printStackTrace(pw);
+                    String stackTrace = sw.toString();
+                    
+                    String errorMsg = "创建IPFS节点失败: " + e.getMessage() + "\n堆栈跟踪:\n" + stackTrace;
+                    Log.e(TAG, errorMsg);
+                    fos.write(errorMsg.getBytes());
+                    throw e;
+                }
+                
+                // 记录Unix Socket API服务启动
+                fos.write("开始服务Unix Socket API...\n".getBytes());
+                node.serveUnixSocketAPI(absSockPath);
+                fos.write("Unix Socket API服务启动成功: " + absSockPath + "\n".getBytes());
+
+                // 服务配置API和网关
+                fos.write("开始服务配置的API和网关...\n".getBytes());
+                node.serveConfig();
+                fos.write("API和网关服务启动成功\n".getBytes());
+                
+                // 创建Shell
+                fos.write("正在创建Shell...\n".getBytes());
+                shell = Core.newUDSShell(absSockPath);
+                fos.write("Shell创建成功\n".getBytes());
+                
+                fos.write("\n================ IPFS启动成功! ================\n".getBytes());
+                Log.d(TAG, "IPFS节点启动流程全部完成");
+                
+            } catch (Exception e) {
+                StringWriter sw = new StringWriter();
+                PrintWriter pw = new PrintWriter(sw);
+                e.printStackTrace(pw);
+                String stackTrace = sw.toString();
+                
+                String errorMsg = "节点启动失败: " + e.getMessage() + "\n堆栈跟踪:\n" + stackTrace;
+                Log.e(TAG, errorMsg);
+                fos.write(("================ 错误信息 ================\n" + errorMsg).getBytes());
+                
+                throw new NodeStartException("Node start failed", e);
+            }
+        } catch (IOException e) {
+            Log.e(TAG, "无法写入日志文件: " + e.getMessage());
         }
-
-        // set mdns locker driver
-        MDNSLockerDriver imdnslocker = new MDNSLockerDriver(context.get());
-        nodeConfig.setMDNSLocker(imdnslocker);
-
-        try {
-            openRepoIfClosed();
-            node = Core.newNode(repo, nodeConfig);
-            node.serveUnixSocketAPI(absSockPath);
-
-            // serve config Addresses API & Gateway
-            node.serveConfig();
-        } catch (Exception e) {
-            throw new NodeStartException("Node start failed", e);
-        }
-
-        shell = Core.newUDSShell(absSockPath);
     }
 
     /**
