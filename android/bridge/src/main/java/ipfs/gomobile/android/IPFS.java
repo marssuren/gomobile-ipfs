@@ -256,7 +256,7 @@ public class IPFS {
                 // 记录Unix Socket API服务启动
                 fos.write("开始服务Unix Socket API...\n".getBytes());
                 node.serveUnixSocketAPI(absSockPath);
-                fos.write("Unix Socket API服务启动成功: " + absSockPath + "\n".getBytes());
+                fos.write(("Unix Socket API服务启动成功: " + absSockPath + "\n").getBytes());
 
                 // 服务配置API和网关
                 fos.write("开始服务配置的API和网关...\n".getBytes());
