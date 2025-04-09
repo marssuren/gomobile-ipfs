@@ -13,14 +13,13 @@
 package node
 
 import (
-	"context"
 	"fmt"
 
-	ds "github.com/ipfs/go-datastore"                      // IPFS数据存储接口
-	ipfs_p2p "github.com/ipfs/kubo/core/node/libp2p"       // IPFS的libp2p实现
-	p2p_record "github.com/libp2p/go-libp2p-record"        // libp2p记录验证
-	p2p_host "github.com/libp2p/go-libp2p/core/host"       // libp2p主机接口
-	p2p_peer "github.com/libp2p/go-libp2p/core/peer"       // 对等节点标识
+	// IPFS数据存储接口
+	ipfs_p2p "github.com/ipfs/kubo/core/node/libp2p" // IPFS的libp2p实现
+	// libp2p记录验证
+	p2p_host "github.com/libp2p/go-libp2p/core/host" // libp2p主机接口
+	// 对等节点标识
 	p2p_routing "github.com/libp2p/go-libp2p/core/routing" // 内容路由接口
 )
 
@@ -45,23 +44,17 @@ type RoutingConfig struct {
 //
 //	集成了自定义配置的IPFS路由选项函数
 func NewRoutingConfigOption(ro ipfs_p2p.RoutingOption, rc *RoutingConfig) ipfs_p2p.RoutingOption {
-	// 返回符合IPFS路由选项接口的函数
-	return func(
-		ctx context.Context, // 上下文，用于取消操作
-		host p2p_host.Host, // 网络主机实例
-		dstore ds.Batching, // 数据存储实例
-		validator p2p_record.Validator, // 记录验证器
-		bootstrapPeers ...p2p_peer.AddrInfo, // 启动节点信息
-	) (p2p_routing.Routing, error) {
-		// 使用基础选项创建路由系统
-		routing, err := ro(ctx, host, dstore, validator, bootstrapPeers...)
+	// 返回一个符合新版RoutingOption接口的函数
+	return func(args ipfs_p2p.RoutingOptionArgs) (p2p_routing.Routing, error) {
+		// 使用基础选项创建路由系统，传入args结构体
+		routing, err := ro(args)
 		if err != nil {
 			return nil, err
 		}
 
 		// 如果提供了配置函数，应用它
-		if rc.ConfigFunc != nil {
-			if err := rc.ConfigFunc(host, routing); err != nil {
+		if rc != nil && rc.ConfigFunc != nil {
+			if err := rc.ConfigFunc(args.Host, routing); err != nil {
 				return nil, fmt.Errorf("failed to config routing: %w", err)
 			}
 		}

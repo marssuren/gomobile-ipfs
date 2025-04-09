@@ -107,8 +107,9 @@ func (im *IpfsMobile) Close() error {
 // ServeCoreHTTP在给定网络监听器上提供IPFS HTTP API服务
 // 允许通过HTTP访问IPFS功能
 func (im *IpfsMobile) ServeCoreHTTP(l net.Listener, opts ...ipfs_corehttp.ServeOption) error {
-	// 配置网关选项，不可写，包含WebUI路径
-	gatewayOpt := ipfs_corehttp.GatewayOption(false, ipfs_corehttp.WebUIPaths...)
+	// 配置网关选项，包含WebUI路径
+	// 注意：新版API不再需要writable参数
+	gatewayOpt := ipfs_corehttp.GatewayOption(ipfs_corehttp.WebUIPaths...)
 	// 添加标准选项：WebUI、网关和命令处理
 	opts = append(opts,
 		ipfs_corehttp.WebUIOption, // 启用Web界面
@@ -125,11 +126,12 @@ func (im *IpfsMobile) ServeCoreHTTP(l net.Listener, opts ...ipfs_corehttp.ServeO
 func (im *IpfsMobile) ServeGateway(l net.Listener, writable bool, opts ...ipfs_corehttp.ServeOption) error {
 	// 添加标准网关选项
 	opts = append(opts,
-		ipfs_corehttp.HostnameOption(),                          // 处理基于主机名的解析
-		ipfs_corehttp.GatewayOption(writable, "/ipfs", "/ipns"), // 配置IPFS/IPNS路径
-		ipfs_corehttp.VersionOption(),                           // 添加版本信息头
-		ipfs_corehttp.CheckVersionOption(),                      // 检查客户端兼容性
-		ipfs_corehttp.CommandsROOption(im.commandCtx),           // 只读命令支持
+		ipfs_corehttp.HostnameOption(),                // 处理基于主机名的解析
+		ipfs_corehttp.GatewayOption("/ipfs", "/ipns"), // 配置IPFS/IPNS路径
+		ipfs_corehttp.VersionOption(),                 // 添加版本信息头
+		ipfs_corehttp.CheckVersionOption(),            // 检查客户端兼容性
+		// CommandsROOption已被废弃，改用普通的CommandsOption
+		ipfs_corehttp.CommandsOption(im.commandCtx), // 命令支持
 	)
 
 	// 启动网关服务
@@ -166,7 +168,7 @@ func NewNode(ctx context.Context, cfg *IpfsConfig) (*IpfsMobile, error) {
 	// 创建命令上下文
 	// 注释表明这可能不是初始化的最佳方式
 	cctx := ipfs_oldcmds.Context{
-		ConfigRoot: cfg.RepoMobile.Path,    // 配置根路径
+		ConfigRoot: cfg.RepoMobile.Path(),  // 配置根路径
 		ReqLog:     &ipfs_oldcmds.ReqLog{}, // 请求日志
 		ConstructNode: func() (*ipfs_core.IpfsNode, error) { // 节点构造函数
 			return inode, nil

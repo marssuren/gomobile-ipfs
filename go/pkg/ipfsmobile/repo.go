@@ -35,7 +35,12 @@ type RepoMobile struct {
 
 	// 仓库在文件系统中的路径
 	// 在移动环境中，这通常指向应用数据目录
-	Path string
+	path string
+}
+
+// Path实现Repo接口的Path方法
+func (mr *RepoMobile) Path() string {
+	return mr.path
 }
 
 // NewRepoMobile创建一个新的移动平台仓库实例
@@ -50,7 +55,7 @@ type RepoMobile struct {
 func NewRepoMobile(path string, repo ipfs_repo.Repo) *RepoMobile {
 	return &RepoMobile{
 		Repo: repo, // 存储底层仓库实现
-		Path: path, // 保存仓库路径
+		path: path, // 保存仓库路径
 	}
 }
 
