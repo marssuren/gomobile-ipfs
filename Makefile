@@ -161,7 +161,6 @@ $(ANDROID_CORE): $(ANDROID_BUILD_DIR_INT_CORE) $(GO_SRC) $(GO_MOD_FILES)
 	GO111MODULE=on cd $(GO_DIR) && go run golang.org/x/mobile/cmd/gomobile bind \
 		-o $(ANDROID_CORE) \
 		-v $(GOMOBILE_OPT) \
-		-cache $(ANDROID_GOMOBILE_CACHE) \
 		-target=$(GOMOBILE_ANDROID_TARGET)$(GOMOBILE_TARGET) \
 		-androidapi $(ANDROID_MINIMUM_VERSION) \
 		-javapkg=org.ipfs.gomobile \
@@ -212,7 +211,6 @@ $(IOS_CORE): $(IOS_BUILD_DIR_INT_CORE) $(GO_SRC) $(GO_MOD_FILES)
 			-o $(IOS_CORE) \
 			-tags 'nowatchdog' \
 			$(GOMOBILE_OPT) \
-			-cache $(IOS_GOMOBILE_CACHE) \
 			-target=$(GOMOBILE_IOS_TARGET)$(GOMOBILE_TARGET) \
 			$(CORE_PACKAGE) $(EXT_PACKAGE)
 	touch $@
