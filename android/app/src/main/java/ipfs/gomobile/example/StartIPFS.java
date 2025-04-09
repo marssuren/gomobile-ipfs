@@ -124,7 +124,7 @@ final class StartIPFS extends AsyncTask<Void, Void, String> {
                     long maxMemory = rt.maxMemory() / (1024 * 1024);
                     long freeMemory = rt.freeMemory() / (1024 * 1024);
                     long totalMemory = rt.totalMemory() / (1024 * 1024);
-                    writeLog(fos, String.format("内存状态: 最大=%dMB, 已用=%dMB, 可用=%dMB", 
+                    writeLog(fos, String.format(Locale.getDefault(), "内存状态: 最大=%dMB, 已用=%dMB, 可用=%dMB", 
                             maxMemory, totalMemory - freeMemory, freeMemory));
                 } catch (Exception e) {
                     writeLog(fos, "获取诊断信息时出错: " + e.getMessage());
