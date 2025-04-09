@@ -164,6 +164,7 @@ $(ANDROID_CORE): $(ANDROID_BUILD_DIR_INT_CORE) $(GO_SRC) $(GO_MOD_FILES)
 		-target=$(GOMOBILE_ANDROID_TARGET)$(GOMOBILE_TARGET) \
 		-androidapi $(ANDROID_MINIMUM_VERSION) \
 		-javapkg=org.ipfs.gomobile \
+		-ldflags "-checklinkname=0" \
 		$(CORE_PACKAGE) $(EXT_PACKAGE)
 	touch $@
 	cd $(GO_DIR) && go mod tidy
@@ -212,6 +213,7 @@ $(IOS_CORE): $(IOS_BUILD_DIR_INT_CORE) $(GO_SRC) $(GO_MOD_FILES)
 			-tags 'nowatchdog' \
 			$(GOMOBILE_OPT) \
 			-target=$(GOMOBILE_IOS_TARGET)$(GOMOBILE_TARGET) \
+			-ldflags "-checklinkname=0" \
 			$(CORE_PACKAGE) $(EXT_PACKAGE)
 	touch $@
 	cd $(GO_DIR) && go mod tidy
