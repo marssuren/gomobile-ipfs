@@ -74,7 +74,7 @@ func OpenRepo(path string) (*Repo, error) {
 
 // GetRootPath 返回仓库的根路径
 func (r *Repo) GetRootPath() string {
-	return r.mr.Path
+	return r.mr.Path()
 }
 
 // SetConfig 设置仓库配置
