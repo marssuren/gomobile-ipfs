@@ -42,9 +42,9 @@ import (
 	manet "github.com/multiformats/go-multiaddr/net"          // 多地址网络接口
 
 	// IPFS核心组件
-	ipfs_config "github.com/ipfs/kubo/config"     // IPFS配置
-	ipfs_bs "github.com/ipfs/kubo/core/bootstrap" // IPFS引导节点
-	libp2p "github.com/libp2p/go-libp2p"          // P2P网络库
+	ipfs_bs "github.com/ipfs/boxo/bootstrap"  // IPFS引导节点
+	ipfs_config "github.com/ipfs/kubo/config" // IPFS配置
+	libp2p "github.com/libp2p/go-libp2p"      // P2P网络库
 )
 
 // Node 结构体定义，代表一个IPFS节点
