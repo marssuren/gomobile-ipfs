@@ -74,10 +74,10 @@ func newConn(ctx context.Context, t *proximityTransport, remoteMa ma.Multiaddr, 
 
 	// Returns an upgraded CapableConn (muxed, addr filtered, secured, etc...)
 	if inbound {
-		return t.upgrader.Upgrade(ctx, t, maconn, network.DirInbound, remotePID, network.NullScope)
+		return t.upgrader.Upgrade(ctx, t, maconn, network.DirInbound, remotePID, &network.NullScope{})
 	}
 
-	return t.upgrader.Upgrade(ctx, t, maconn, network.DirOutbound, remotePID, network.NullScope)
+	return t.upgrader.Upgrade(ctx, t, maconn, network.DirOutbound, remotePID, &network.NullScope{})
 }
 
 // Read reads data from the connection.
