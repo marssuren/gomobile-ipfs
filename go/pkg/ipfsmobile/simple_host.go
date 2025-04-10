@@ -29,12 +29,10 @@ func SimpleHostOption() libp2p.HostOption {
 			p2p.Identity(pkey),
 			p2p.Peerstore(ps),
 			p2p.NoListenAddrs,
-			p2p.DisableRelay(),
+			p2p.EnableRelay(), // 启用Relay功能是使用AutoRelay的前提
 			p2p.ForceReachabilityPrivate(),
 			p2p.Security(libp2ptls.ID, libp2ptls.New),
 			p2p.Security(libp2pnoise.ID, libp2pnoise.New),
-			// 解决libp2p中的验证错误：禁用AutoRelay功能
-			// 在libp2p中，当Relay被禁用时，不能启用AutoRelay
 		}
 
 		// 合并传入的选项和基础选项
