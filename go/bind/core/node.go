@@ -27,6 +27,7 @@ import (
 	"fmt"     // 格式化输出
 	"log"     // 日志功能
 	"net"     // 网络操作
+	"runtime" // 运行时信息，用于检测平台
 	"sync"    // 并发控制
 
 	// 项目内部包
@@ -56,6 +57,29 @@ type Node struct {
 	mdnsService p2p_mdns.Service // mDNS服务，用于本地网络发现
 
 	ipfsMobile *ipfs_mobile.IpfsMobile // 移动平台IPFS节点实例
+}
+
+// 检测当前平台是否为Android
+func isAndroidPlatform() bool {
+	return runtime.GOOS == "android"
+}
+
+// 检测当前网络环境是否受限
+func isNetworkLimited() bool {
+	// 尝试使用netlink API，如果失败则认为网络环境受限
+	_, err := net.InterfaceAddrs()
+	if err != nil {
+		log.Printf("网络接口检测失败: %v", err)
+		return true
+	}
+
+	// 如果是Android平台，认为网络环境受限
+	if isAndroidPlatform() {
+		log.Printf("检测到Android平台，使用受限网络配置")
+		return true
+	}
+
+	return false
 }
 
 // NewNode 创建一个新的IPFS节点
@@ -128,25 +152,37 @@ func NewNode(r *Repo, config *NodeConfig) (*Node, error) {
 		log.Printf("cannot enable BLE on an unsupported platform")
 	}
 
+	// 检测网络环境，并选择合适的配置
+	networkLimited := isNetworkLimited()
+
 	// 配置IPFS节点
 	ipfscfg := &ipfs_mobile.IpfsConfig{
 		HostConfig: &ipfs_mobile.HostConfig{
 			Options: []libp2p.Option{
 				bleOpt,
-				libp2p.DisableRelay(),           // 禁用中继功能
+				libp2p.DisableRelay(),             // 禁用中继功能
 				libp2p.ForceReachabilityPrivate(), // 强制私有网络，避免NAT检测
-				libp2p.NoListenAddrs(),          // 不监听地址，避免地址解析问题
-				libp2p.NoTransports(),           // 禁用默认传输，仅使用我们定义的传输
 			},
-			DisableNatPortMap: true,             // 禁用NAT端口映射
 		},
 		RepoMobile: r.mr,
-		ExtraOpts: map[string]bool{
-			"pubsub": false,   // 禁用pubsub，避免额外的网络复杂性
-			"ipnsps": false,   // 禁用IPNS over pubsub
-			"dht": false,      // 禁用完整DHT
-			"dhtclient": true, // 使用客户端模式DHT
-		},
+	}
+
+	// 如果是受限网络环境（如Android），使用SimpleHostOption绕过循环依赖
+	if networkLimited {
+		log.Printf("检测到受限网络环境，使用SimpleHostOption和精简配置")
+		ipfscfg.HostOption = ipfs_mobile.SimpleHostOption()
+		ipfscfg.ExtraOpts = map[string]bool{
+			"pubsub":    false, // 禁用pubsub，避免额外的网络复杂性
+			"ipnsps":    false, // 禁用IPNS over pubsub
+			"dht":       false, // 禁用完整DHT
+			"dhtclient": true,  // 使用客户端模式DHT
+		}
+	} else {
+		// 正常网络环境，使用完整功能
+		ipfscfg.ExtraOpts = map[string]bool{
+			"pubsub": true, // 启用实验性的pubsub功能
+			"ipnsps": true, // 启用IPNS over pubsub
+		}
 	}
 
 	// 获取仓库配置
