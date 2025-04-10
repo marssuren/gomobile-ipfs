@@ -152,9 +152,9 @@ func (im *IpfsMobile) ServeGateway(l net.Listener, writable bool, opts ...ipfs_c
 // 这是创建IPFS节点的主要入口点
 func NewNode(ctx context.Context, cfg *IpfsConfig) (*IpfsMobile, error) {
 	// 预设环境，避免NAT探测和网络发现问题
-    os.Setenv("LIBP2P_FORCE_REACHABILITY", "private")
-    os.Setenv("LIBP2P_TCP_REUSEPORT", "false")
-    
+	os.Setenv("LIBP2P_FORCE_REACHABILITY", "private")
+	os.Setenv("LIBP2P_TCP_REUSEPORT", "false")
+
 	// 设置高级别日志记录，确保捕获所有错误
 	logging.SetLogLevel("*", "DEBUG")
 
@@ -192,9 +192,9 @@ func NewNode(ctx context.Context, cfg *IpfsConfig) (*IpfsMobile, error) {
 
 	// 构建IPFS节点配置
 	log.Debug("构建IPFS节点配置")
-	if cfg.HostOption == ipfs_p2p.DefaultHostOption {
-        cfg.HostOption = SimpleHostOption()
-    }
+	if cfg.HostOption == nil {
+		cfg.HostOption = SimpleHostOption()
+	}
 	buildcfg := &ipfs_core.BuildCfg{
 		Online:                      true,                                                         // 节点处于在线模式
 		Permanent:                   false,                                                        // 非永久节点(适合移动设备)
