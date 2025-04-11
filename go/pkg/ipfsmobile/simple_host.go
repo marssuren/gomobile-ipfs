@@ -8,8 +8,6 @@ import (
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/core/peerstore"
-	libp2pnoise "github.com/libp2p/go-libp2p/p2p/security/noise"
-	libp2ptls "github.com/libp2p/go-libp2p/p2p/security/tls"
 )
 
 // 简化版主机选项，完全绕过fx依赖注入
@@ -31,8 +29,6 @@ func SimpleHostOption() libp2p.HostOption {
 			p2p.NoListenAddrs,
 			p2p.EnableRelay(), // 启用Relay功能是使用AutoRelay的前提
 			p2p.ForceReachabilityPrivate(),
-			p2p.Security(libp2ptls.ID, libp2ptls.New),
-			p2p.Security(libp2pnoise.ID, libp2pnoise.New),
 		}
 
 		// 合并传入的选项和基础选项
