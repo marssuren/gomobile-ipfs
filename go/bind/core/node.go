@@ -154,13 +154,13 @@ func NewNode(r *Repo, config *NodeConfig) (*Node, error) {
 
 	// 检测网络环境，并选择合适的配置
 	networkLimited := isNetworkLimited()
-
+	log.Printf("networkLimited: %v", networkLimited)
 	// 配置IPFS节点
 	ipfscfg := &ipfs_mobile.IpfsConfig{
 		HostConfig: &ipfs_mobile.HostConfig{
 			Options: []libp2p.Option{
 				bleOpt,
-				libp2p.DisableRelay(),             // 禁用中继功能
+				libp2p.EnableRelay(),              // 禁用中继功能
 				libp2p.ForceReachabilityPrivate(), // 强制私有网络，避免NAT检测
 			},
 		},
